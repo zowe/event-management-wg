@@ -23,6 +23,11 @@ public class Consumer {
     this.consumer.subscribe(Arrays.asList(topic));
     this.consumerId = consumerId;
     if (fromBeginning) {
+      System.out.println(
+          "Starting consumer for topic "
+              + topic
+              + ". Resetting consumer to offset 0 [start of the world], this may take some time...");
+      ;
       this.consumer.poll(0); // might be required to get an assignment?
       this.consumer.assignment().forEach(t -> this.consumer.seek(t, 0));
       // this.consumer.seekToBeginning(this.consumer.assignment());   This did not work??
@@ -31,6 +36,7 @@ public class Consumer {
 
   /** Blocks and consumes messages from a topic. */
   public void listen() {
+    System.out.println("Listening for messages...");
     while (true) {
       ConsumerRecords<String, String> recs = consumer.poll(Duration.ofMillis(500));
       for (ConsumerRecord<String, String> record : recs) {

@@ -21,10 +21,9 @@ public class Producer {
     this.producerId = producerId;
   }
 
-  public void send(String job, String rc) {
+  public void send(String data) {
     ProducerRecord<String, String> rec =
-        new ProducerRecord<>(
-            topic, producerId, String.format("{ \"job\":\"%s\", \"rc\": \"%s\"}", job, rc));
+        new ProducerRecord<>(topic, producerId, String.format("%s", data));
     this.producer.send(rec);
   }
 

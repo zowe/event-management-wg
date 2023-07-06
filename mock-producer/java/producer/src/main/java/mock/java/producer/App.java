@@ -3,6 +3,9 @@
  */
 package mock.java.producer;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -11,27 +14,78 @@ import org.apache.commons.cli.ParseException;
 
 public class App {
 
-  public static void main(String[] args) throws ParseException {
+  public static void main(String[] args) throws ParseException, IOException, InterruptedException {
     Options opts = new Options();
-    opts.addOption("j", "job", true, "job name to publish");
-    opts.addOption("r", "rc", true, "return code");
+
+    opts.addOption("df", "data-feed", true, "Path to the mock data feed location.");
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(opts, args);
 
-    if (!(cmd.hasOption("job") && cmd.hasOption("rc"))) {
-      System.out.println("Missing either --job or --rc on the command line.");
+    if (!cmd.hasOption("df")) {
+      System.out.println("Requires --data-feed parameter to be set on the command line.");
       System.exit(1);
     }
 
-    Producer p =
-        Producer.getInstance(new String[] {"localhost:9092"}, "demo-topic", "java-producer-id");
+    MockDataLoader mockDataLoader = new MockDataLoader(cmd.getOptionValue("df"));
 
-    p.send(cmd.getOptionValue("job"), cmd.getOptionValue("rc"));
+    List<MockDataEntry> mockData = mockDataLoader.getMockData();
 
-    p.close();
+    List<Thread> producerThreads = startProducerThreads(mockData);
 
-    System.out.println("Completed sending message.");
+    // main thread wait for tasks to complete
+    boolean threadsComplete = false;
+    while (!threadsComplete) {
+      threadsComplete = true;
+      for (Thread t : producerThreads) {
+        if (t.isAlive()) {
+          threadsComplete = false;
+        }
+      }
+      Thread.sleep(1000);
+    }
+
+    System.out.println("Completed sending messages.");
     System.exit(0);
+  }
+
+  static List<Thread> startProducerThreads(List<MockDataEntry> mockData) {
+    List<Thread> producerThreads = new ArrayList<>();
+    for (MockDataEntry mockEntry : mockData) {
+      Thread t =
+          new Thread(
+              () -> {
+                Producer p =
+                    Producer.getInstance(
+                        new String[] {"localhost:9092"},
+                        mockEntry.getTopic(),
+                        "java-producer-" + mockEntry.getTopic());
+
+                String[] dataFeed = mockEntry.getData();
+                int[] interval = mockEntry.getTimeIntervals();
+
+                try {
+
+                  for (int i = 0; i < dataFeed.length; i++) {
+                    // for cases where we have a defined set of times to publish the message
+                    if (interval.length > 1) {
+                      int lastTimeStep = (i > 0) ? interval[i - 1] : 0;
+                      int currentSleepSec = interval[i] - lastTimeStep;
+                      Thread.sleep(currentSleepSec * 1000l);
+                    } else {
+                      Thread.sleep(interval[0] * 1000l);
+                    }
+
+                    p.send(dataFeed[i]);
+                  }
+                } catch (InterruptedException e) {
+                  e.printStackTrace();
+                }
+                p.close();
+              });
+      t.start();
+      producerThreads.add(t);
+    }
+    return producerThreads;
   }
 }

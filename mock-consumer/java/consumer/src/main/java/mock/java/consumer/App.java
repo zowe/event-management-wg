@@ -14,18 +14,22 @@ public class App {
   public static void main(String[] args) throws ParseException {
     Options opts = new Options();
     opts.addOption("fb", "from-beginning", false, "receives messages from offset 0");
-
+    opts.addOption("t", "topic", true, "Topic to read from");
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(opts, args);
 
+    String topic = "demo-topic";
     boolean fromBeginning = false;
     if (cmd.hasOption("from-beginning")) {
       fromBeginning = true;
     }
+    if (cmd.hasOption("topic")) {
+      topic = cmd.getOptionValue("topic");
+    }
 
     Consumer c =
         Consumer.getInstance(
-            new String[] {"localhost:9092"}, "demo-topic", "java-consumer-id", fromBeginning);
+            new String[] {"localhost:9092"}, topic, "java-consumer-id", fromBeginning);
 
     c.listen();
 

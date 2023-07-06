@@ -1,0 +1,32 @@
+####
+#  Very simple mock data generator:
+#
+#  Line 1: topic name 
+#  Line 2: data feed separated by commas. Use '%t' to use a base time modified by Line 3
+#  Line 3: time interval to publish data in seconds. Either exact time per data item (must be ascending order), or a single value repeated (10 = every 10s)
+#          Time entries of 0,15,45 publishes data at 0s, 15s, and 45s  
+#          Time entries of 0,90,90,120 publishes data at 0s, twice at 90s (inexact), and once at 120s. 
+#
+#  Empty lines, and lines starting with '#' are ignored.
+# 
+#  If the mock topic does not exist, you must create it or set auto.create.topics.enable=true in your Kafka broker.
+#
+#  If the mock topic already exists, the producer will append the mock data to the existing topic.
+#
+#  This does not support arbitrarily long mock-data generation yet (produce 'x' iterations of data)
+
+mock-topic-one
+data-one,data-two,data-three,data-four
+15
+
+mock-topic-two
+data-one,data-two,data-three,data-four
+0,20,22,24
+
+mock-topic-three
+1,2,3,4,5,6,7,8,9,10
+5
+
+mock-topic-inconsistent
+1,2,3,four,five,{"abc":"123"}
+10
